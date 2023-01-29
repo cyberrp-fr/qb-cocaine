@@ -119,7 +119,7 @@ local initCocaPickingZone = function ()
         name = 'Champ Coca',
         useZ = true,
         heading = Config.PickingZoneHeading,
-        debugPoly = true,
+        debugPoly = false,
     })
 
     cocaPickingZone:onPlayerInOut(function(isPointInside)
@@ -150,7 +150,7 @@ local initCocaProcessingZone = function ()
         name = 'Traitement Coca',
         useZ = true,
         heading = Config.ProcessingZoneHeading,
-        debugPoly = true,
+        debugPoly = false,
     })
 
     cocaProcessingZone:onPlayerInOut(function (isPointInside)
