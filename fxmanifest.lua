@@ -2,9 +2,9 @@ fx_version 'cerulean'
 game 'gta5'
 lua54 'yes'
 
+author '0xIbra <ibragim.ai95@gmail.com>'
 description 'QB-Cocaine'
 version '1.0.0'
-author '0xIbra'
 
 shared_scripts {
     'config.lua',
