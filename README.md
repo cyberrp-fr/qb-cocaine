@@ -2,9 +2,13 @@
 FiveM Cocaine picking, processing and selling script for QBCore Framework.
 
 ### Dependencies
- - Cayo Perico Map
- - qb-core
- - qb-inventory
+ - **Cayo Perico Map**  
+    This dependency can be easily removed by changing the `PickingZone` and `ProcessingZone` variables in `config.lua`.  
+    The `PickingZone` variable defines the place where players can pick coca leaves and the `ProcessingZone` variable defines where the players can process the coca leaves they've picked.
+
+    Change these 2 variables to a location in los santos map and you won't need the Cayo perico map for this script. 
+ - **qb-core**
+ - **qb-inventory**
 
 ### Installation
 
