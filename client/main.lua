@@ -15,14 +15,14 @@ local cocaProcessingLoopIsRunning = false
 -- help text (qb-core:drawtext)
 local helpTextShowing = false
 
-local loadAnimDict = function(dict)
+local function loadAnimDict(dict)
     while not HasAnimDictLoaded(dict) do
         RequestAnimDict(dict)
         Citizen.Wait(50)
     end
 end
 
-local loadModel = function(model)
+local function loadModel(model)
     if type(model) == 'number' then
         model = model
     else
@@ -35,7 +35,7 @@ local loadModel = function(model)
 end
 
 -- function that handles picking coca leaves
-local pickCoca = function()
+local function pickCoca()
     if busy then
         return
     end
@@ -58,7 +58,7 @@ local pickCoca = function()
 end
 
 -- function that handles coca processing
-local processCocaIntoCocaine = function ()
+local function processCocaIntoCocaine()
     if busy then
         return
     end
@@ -143,7 +143,7 @@ local buyerZoneIsInside = false
 local buyerZoneLoopIsRunning = false
 
 -- sell cocaine to buyer function
-local sellCocaineToBuyer = function ()
+local function sellCocaineToBuyer()
     local requiredItem = Config.Reward['cocaine_bag']['item']
 
     local i = 0
@@ -289,6 +289,7 @@ Citizen.CreateThread(function ()
 
         if helpTextShowing and not isInsideZone and not isInsideProcessingZone then
             exports["qb-core"]:HideText()
+            helpTextShowing = false
         end
 
         -- =============
