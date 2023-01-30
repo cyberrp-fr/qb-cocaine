@@ -9,7 +9,6 @@ FiveM Cocaine picking, processing and selling script for QBCore Framework.
     Change these 2 variables to a location in los santos map and you won't need the Cayo perico map for this script. 
  - [**qb-core**](https://github.com/qbcore-framework/qb-core)
  - [**qb-inventory**](https://github.com/qbcore-framework/qb-inventory)
- - [**PolyZone**](https://github.com/mkafrin/PolyZone)
 
 ### Installation
 

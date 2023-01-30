@@ -1,15 +1,16 @@
 local QBCore = exports['qb-core']:GetCoreObject()
 local busy = false -- check if player already either picking or processing
 
-local cocaPickingZone = nil -- coca leaves picking polyzone (boxzone)
-local cocaProcessingZone = nil -- coca processing polyzone (boxzone)
-
 local isInsideZone = false -- is player inside picking zone
 local isInsideProcessingZone = false -- is player inside processing zone
 
 local animLoaded = false -- picking anim loaded 
 local processAnimLoaded = false -- processing anim loaded
 local ped = PlayerPedId()
+
+-- loops state
+local cocaHarvestingLoopIsRunning = false
+local cocaProcessingLoopIsRunning = false
 
 local loadAnimDict = function(dict)
     while not HasAnimDictLoaded(dict) do
@@ -87,106 +88,55 @@ end
 
 -- coca picking zone loop
 -- this loop is only run when inside zone
-local cocaPickingZoneLoop = function()
-    Citizen.CreateThread(function ()
-        while isInsideZone do
-            if IsControlJustPressed(0, 51) then
-                pickCoca()
+local function cocaPickingZoneLoop()
+    if not cocaHarvestingLoopIsRunning then
+        Citizen.CreateThread(function ()
+            cocaHarvestingLoopIsRunning = true
+            while isInsideZone do
+                if IsControlJustPressed(0, 51) then
+                    pickCoca()
+                end
+                Citizen.Wait(1)
             end
-            Citizen.Wait(1)
-        end
-    end)
+            cocaHarvestingLoopIsRunning = false
+        end)
+    end
 end
 
 -- coca processing zone loop
 -- this loop is only run when inside zone
-local cocaProcessingZoneLoop = function ()
-    Citizen.CreateThread(function ()
-        while isInsideProcessingZone do
-            if IsControlJustPressed(0, 51) then
-                processCocaIntoCocaine()
+local function cocaProcessingZoneLoop()
+    if not cocaProcessingLoopIsRunning then
+        exports["qb-core"]:DrawText(Lang:t("info.process_coca"), "left")
+
+        Citizen.CreateThread(function ()
+            cocaProcessingLoopIsRunning = true
+            while isInsideProcessingZone do
+                if IsControlJustPressed(0, 51) then
+                    processCocaIntoCocaine()
+                end
+                Citizen.Wait(1)
             end
-            Citizen.Wait(1)
-        end
-    end)
-end
-
--- function that creates coca picking zone
--- this is done for optimization, to create when near and destroy when far away
-local initCocaPickingZone = function ()
-    -- coca leaves picking zone 
-    cocaPickingZone = BoxZone:Create(Config.PickingZone, 25.0, 35.0, {
-        name = 'Champ Coca',
-        useZ = true,
-        heading = Config.PickingZoneHeading,
-        debugPoly = false,
-    })
-
-    cocaPickingZone:onPlayerInOut(function(isPointInside)
-        isInsideZone = isPointInside
-        -- if player inside zone
-        if isPointInside then
-            exports['qb-core']:DrawText(Lang:t("info.pick_coca_leaves"), 'left')
-            cocaPickingZoneLoop()
-        else
-            exports['qb-core']:HideText()
-        end
-    end)
-end
-
--- function that destroys coca picking zone
-local destroyCocaPickingZone = function ()
-    if cocaPickingZone ~= nil then
-        cocaPickingZone:destroy()
-        cocaPickingZone = nil
-    end
-end
-
--- function that creates coca processing zone
--- this is done for optimization, to create when near and destroy when far away
-local initCocaProcessingZone = function ()
-    -- coca leaves processing into cocaine zone
-    cocaProcessingZone = BoxZone:Create(Config.ProcessingZone, 2.0, 8.0, {
-        name = 'Traitement Coca',
-        useZ = true,
-        heading = Config.ProcessingZoneHeading,
-        debugPoly = false,
-    })
-
-    cocaProcessingZone:onPlayerInOut(function (isPointInside)
-        isInsideProcessingZone = isPointInside
-
-        if isPointInside then
-            exports['qb-core']:DrawText(Lang:t("info.process_coca"), 'left')
-            cocaProcessingZoneLoop()
-        else
-            exports['qb-core']:HideText()
-        end
-    end)
-end
-
--- function that destroys coca processing zone
-local destroyCocaProcessingZone = function ()
-    if cocaProcessingZone ~= nil then
-        cocaProcessingZone:destroy()
-        cocaProcessingZone = nil
+            cocaProcessingLoopIsRunning = false
+        end)
     end
 end
 
 
 -- Buyer Globals
-local buyerLoaded = false
 local buyerAnimLoaded = false
 local buyerAnimDict = 'mp_ped_interaction'
 local buyerAnim = 'handshake_guy_a'
 
-local buyerDataSynced = false
+local buyerDataSynced = false -- has buyer peds and vehicle data been retrieved from server
+local buyerObjectsSynced = false -- has buyer peds and vehicle been configured
+
 local buyerVehicle = nil
 local buyerPed = nil
 local bodyguard1 = nil
 local bodyguard2 = nil
-local buyerZone = nil
 local buyerZoneIsInside = false
+local buyerZoneLoopIsRunning = false
 
 -- sell cocaine to buyer function
 local sellCocaineToBuyer = function ()
@@ -223,31 +173,33 @@ end
 
 -- buyer zone loop
 local function buyerZoneLoop()
-    Citizen.CreateThread(function ()
-        while buyerZoneIsInside do
-            QBCore.Functions.DrawText3D(Config.Buyer.pos.x, Config.Buyer.pos.y, Config.Buyer.pos.z + 0.3, Lang:t("info.press_sell_cocaine"))
-
-            -- detect click
-            if IsControlJustPressed(0, 51) then
-                local playerCoords = GetEntityCoords(PlayerPedId())
-                local dist = #(playerCoords - Config.Buyer['pos'].xyz)
-                if dist <= 1.5 and not busy then
-                    busy = true
-                    sellCocaineToBuyer() -- trigger sell cocaine function
-                    busy = false
+    if not buyerZoneLoopIsRunning then
+        Citizen.CreateThread(function ()
+            buyerZoneLoopIsRunning = true
+            while buyerZoneIsInside do
+                QBCore.Functions.DrawText3D(Config.Buyer.pos.x, Config.Buyer.pos.y, Config.Buyer.pos.z + 0.3, Lang:t("info.press_sell_cocaine"))
+    
+                -- detect click
+                if IsControlJustPressed(0, 51) then
+                    local playerCoords = GetEntityCoords(PlayerPedId())
+                    local dist = #(playerCoords - Config.Buyer['pos'].xyz)
+                    if dist <= 1.5 and not busy then
+                        busy = true
+                        sellCocaineToBuyer() -- trigger sell cocaine function
+                        busy = false
+                    end
                 end
+    
+                Citizen.Wait(1)
             end
-
-            Citizen.Wait(1)
-        end
-    end)
+            buyerZoneLoopIsRunning = false
+        end)
+    end
 end
 
 -- function that syncs buyer ped
 local function syncBuyerPeds()
     local bodyguardAnimDict = 'anim@move_m@security_guard'
-    local bodyguardAnim = 'idle_var_01'
-    local bodyguard2Anim = 'idle_var_02'
 
     loadAnimDict(bodyguardAnimDict)
     loadModel(Config.Buyer.vehicle)
@@ -292,90 +244,78 @@ local function syncBuyerData()
     end)
 end
 
-local function createBuyerZone()
-    -- boxzone
-    buyerZone = BoxZone:Create(vector3(Config.Buyer['pos'].xy - 0.25, Config.Buyer['pos'].z), 2.0, 1.0, {
-        name = 'Acheteur Cocaine',
-        useZ = true,
-        heading = 315.0,
-        debugPoly = false,
-    })
-
-    buyerZone:onPlayerInOut(function (isInside)
-        buyerZoneIsInside = isInside
-        if isInside then
-            buyerZoneLoop()
-        end
-    end)
-end
-
-local function destroyBuyerZone()
-    buyerZone:destroy()
-end
-
 -- =========
 -- MAIN LOOP
 -- =========
 Citizen.CreateThread(function ()
-
-    Citizen.Wait(2000)
-    if not buyerDataSynced then
-        syncBuyerData()
-        Citizen.Wait(1000)
-        if buyerPed ~= nil and buyerVehicle ~= nil then
-            buyerDataSynced = true
-            syncBuyerPeds()
-        end
-    end
-
     while true do
         local playerCoords = GetEntityCoords(PlayerPedId())
+        local playerHeading = GetEntityHeading(ped)
         local cocaFieldCoords = Config.PickingZone
-        local cocaProcessingCoords = Config.ProcessingZone
+        -- local cocaProcessingCoords = Config.ProcessingZone
 
+        -- ==================
+        -- === Harvesting ===
+        -- ==================
         -- picking zone
         local dist = #(playerCoords - cocaFieldCoords)
 
-        -- create coca picking zone if distance between player and field less than 30m
-        if dist <= 30.0 then
-            if cocaPickingZone == nil then
-                initCocaPickingZone()
-            end
-        else -- if not then destroy the zone as the player is far away
-            if cocaPickingZone ~= nil then
-                destroyCocaPickingZone()
-            end
+        -- if is near coca field, then start loop and show help text
+        if dist <= 17.0 then
+            isInsideZone = true
+            exports['qb-core']:DrawText(Lang:t("info.pick_coca_leaves"), 'left')
+            cocaPickingZoneLoop()
+        else -- if not then stop showing help text as the player is far away
+            isInsideZone = false
         end
 
-        -- processing zone
-        dist = #(playerCoords - cocaProcessingCoords)
-
-        -- create coca processing zone if distance between player and processing table less than 10m
-        if dist <= 10.0 then
-            if cocaProcessingZone == nil then
-                initCocaProcessingZone()
-            end
-        else -- else destroy the zone as player is far away
-            if cocaProcessingZone ~= nil then
-                destroyCocaProcessingZone()
-            end
-        end
-
-        -- buyer zone
-        dist = #(playerCoords - Config['Buyer']['pos'].xyz)
-        if dist <= 30.0 then
-            if not buyerLoaded then
-                createBuyerZone()
-                buyerLoaded = true
-            end
+        -- ==================
+        -- === Processing ===
+        -- ==================
+        dist = #(playerCoords - Config.ProcessingZone)
+        if dist <= 10.0 and (playerHeading <= 360.0 and playerHeading >= 305.0) then
+            isInsideProcessingZone = true
+            exports["qb-core"]:DrawText(Lang:t("info.process_coca"), "left")
+            cocaProcessingZoneLoop()
         else
-            if buyerLoaded then
-                destroyBuyerZone()
-                buyerLoaded = false
+            isInsideProcessingZone = false
+        end
+
+        if not isInsideZone and not isInsideProcessingZone then
+            exports["qb-core"]:HideText()
+        end
+
+        -- =============
+        -- === Buyer ===
+        -- =============
+
+        dist = #(playerCoords - Config['Buyer']['pos'].xyz)
+
+        if not buyerDataSynced then
+            syncBuyerData()
+            Citizen.Wait(1000)
+            if buyerPed ~= nil and buyerVehicle ~= nil then
+                buyerDataSynced = true
             end
         end
 
-        -- wait 2 seconds
-        Citizen.Wait(2000)
+        if not buyerObjectsSynced and buyerDataSynced and dist <= 50.0 then
+            if buyerPed ~= nil and buyerVehicle ~= nil then
+                if GetIsVehicleEngineRunning(buyerVehicle) == false then
+                    syncBuyerPeds()
+                    buyerObjectsSynced = true
+                end
+            end
+        end
+
+        if dist <= 3.0 and (playerHeading <= 360.0 and playerHeading >= 260.0) then
+            buyerZoneIsInside = true
+            buyerZoneLoop()
+        else
+            buyerZoneIsInside = false
+        end
+
+        -- wait 1 seconds
+        Citizen.Wait(1000)
     end
 end)
