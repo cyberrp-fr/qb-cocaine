@@ -3,6 +3,7 @@ local busy = false -- check if player already either picking or processing
 
 local isInsideZone = false -- is player inside picking zone
 local isInsideProcessingZone = false -- is player inside processing zone
+local isNearBuyer = false
 
 local animLoaded = false -- picking anim loaded 
 local processAnimLoaded = false -- processing anim loaded
@@ -257,18 +258,23 @@ AddEventHandler("onClientResourceStart", function (resourceName)
     end
 end)
 
+local function loadBuyerData()
+    CreateThread(function ()
+        while isNearBuyer and not buyerDataSynced do
+            Wait(100)
+            syncBuyerData()
+
+            if bodyguard1 ~= nil and bodyguard1 ~= 0 then
+                buyerDataSynced = true
+            end
+        end
+    end)
+end
+
 -- =========
 -- MAIN LOOP
 -- =========
 CreateThread(function ()
-    while not buyerDataSynced do
-        Wait(100)
-        syncBuyerData()
-        if buyerVehicle ~= nil and buyerVehicle ~= 0 then
-            buyerDataSynced = true
-        end
-    end
-
     while true do
         playerPed = PlayerPedId()
         local playerCoords = GetEntityCoords(playerPed)
@@ -315,6 +321,15 @@ CreateThread(function ()
         -- =============
 
         dist = #(playerCoords - Config['Buyer']['pos'].xyz)
+        if dist <= 50.0 then
+            isNearBuyer = true
+        else
+            isNearBuyer = false
+        end
+
+        if not buyerDataSynced and isNearBuyer then
+            loadBuyerData()
+        end
 
         if not buyerObjectsSynced and buyerDataSynced and dist <= 50.0 then
             if buyerPed ~= nil and buyerVehicle ~= nil then
