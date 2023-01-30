@@ -12,6 +12,9 @@ local ped = PlayerPedId()
 local cocaHarvestingLoopIsRunning = false
 local cocaProcessingLoopIsRunning = false
 
+-- help text (qb-core:drawtext)
+local helpTextShowing = false
+
 local loadAnimDict = function(dict)
     while not HasAnimDictLoaded(dict) do
         RequestAnimDict(dict)
@@ -108,6 +111,7 @@ end
 local function cocaProcessingZoneLoop()
     if not cocaProcessingLoopIsRunning then
         exports["qb-core"]:DrawText(Lang:t("info.process_coca"), "left")
+        helpTextShowing = true
 
         Citizen.CreateThread(function ()
             cocaProcessingLoopIsRunning = true
@@ -264,6 +268,7 @@ Citizen.CreateThread(function ()
         if dist <= 17.0 then
             isInsideZone = true
             exports['qb-core']:DrawText(Lang:t("info.pick_coca_leaves"), 'left')
+            helpTextShowing = true
             cocaPickingZoneLoop()
         else -- if not then stop showing help text as the player is far away
             isInsideZone = false
@@ -276,12 +281,13 @@ Citizen.CreateThread(function ()
         if dist <= 10.0 and (playerHeading <= 360.0 and playerHeading >= 305.0) then
             isInsideProcessingZone = true
             exports["qb-core"]:DrawText(Lang:t("info.process_coca"), "left")
+            helpTextShowing = true
             cocaProcessingZoneLoop()
         else
             isInsideProcessingZone = false
         end
 
-        if not isInsideZone and not isInsideProcessingZone then
+        if helpTextShowing and not isInsideZone and not isInsideProcessingZone then
             exports["qb-core"]:HideText()
         end
 
