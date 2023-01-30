@@ -6,7 +6,7 @@ local isInsideProcessingZone = false -- is player inside processing zone
 
 local animLoaded = false -- picking anim loaded 
 local processAnimLoaded = false -- processing anim loaded
-local ped = PlayerPedId()
+local playerPed = nil
 
 -- loops state
 local cocaHarvestingLoopIsRunning = false
@@ -50,7 +50,7 @@ local function pickCoca()
 
     local animDuration = 3000
     local anim = 'idle_a'
-    TaskPlayAnim(ped, animDict, anim, 8.0, 8.0, animDuration, 0)
+    TaskPlayAnim(playerPed, animDict, anim, 8.0, 8.0, animDuration, 0)
     Wait(animDuration)
 
     TriggerServerEvent('qb-cocaine:server:rewardCocaLeaves')
@@ -81,7 +81,7 @@ local function processCocaIntoCocaine()
     end
 
     local animDuration = 3000
-    TaskPlayAnim(ped, animDict, anim, 8.0, 8.0, animDuration, 0)
+    TaskPlayAnim(playerPed, animDict, anim, 8.0, 8.0, animDuration, 0)
     Wait(animDuration)
 
     TriggerServerEvent('qb-cocaine:server:processCocaine')
@@ -168,7 +168,7 @@ local function sellCocaineToBuyer()
     end
 
     local animDuration = 1600
-    TaskPlayAnim(ped, buyerAnimDict, buyerAnim, 8.0, 8.0, animDuration, 0)
+    TaskPlayAnim(playerPed, buyerAnimDict, buyerAnim, 8.0, 8.0, animDuration, 0)
     TaskPlayAnim(buyerPed, buyerAnimDict, buyerAnim, 8.0, 8.0, animDuration, 0)
     Wait(animDuration)
 
@@ -204,10 +204,7 @@ end
 -- function that syncs buyer ped
 local function syncBuyerPeds()
     local bodyguardAnimDict = 'anim@move_m@security_guard'
-
     loadAnimDict(bodyguardAnimDict)
-    loadModel(Config.Buyer.vehicle)
-
     Wait(200)
 
     -- [start] sync vehicle
@@ -237,24 +234,45 @@ end
 -- retrieving peds and vehicle IDs from server
 local function syncBuyerData()
     QBCore.Functions.TriggerCallback("qb-cocaine:server:getBuyerData", function (data)
-        if data.buyerPed == 0 or data.buyerPed == nil then
+        if data.buyerVehicle == nil or data.buyerPed == nil or data.bodyguard1 == nil or data.bodyguard2 == nil then
             return
         end
 
-        buyerPed = NetworkGetEntityFromNetworkId(data.buyerPed)
-        buyerVehicle = NetworkGetEntityFromNetworkId(data.buyerVehicle)
-        bodyguard1 = NetworkGetEntityFromNetworkId(data.bodyguard1)
-        bodyguard2 = NetworkGetEntityFromNetworkId(data.bodyguard2)
+        buyerPed = NetToPed(data.buyerPed)
+        buyerVehicle = NetToVeh(data.buyerVehicle)
+        bodyguard1 = NetToPed(data.bodyguard1)
+        bodyguard2 = NetToPed(data.bodyguard2)
+
+        if buyerVehicle ~= nil and buyerVehicle ~= 0 then
+            buyerDataSynced = true
+        end
     end)
 end
+
+AddEventHandler("onClientResourceStart", function (resourceName)
+    if resourceName == GetCurrentResourceName() then
+        loadModel(Config.Buyer.vehicle)
+        loadModel(Config.Buyer.ped)
+        loadModel(Config.Buyer.bodyguard)
+    end
+end)
 
 -- =========
 -- MAIN LOOP
 -- =========
-Citizen.CreateThread(function ()
+CreateThread(function ()
+    while not buyerDataSynced do
+        Wait(100)
+        syncBuyerData()
+        if buyerVehicle ~= nil and buyerVehicle ~= 0 then
+            buyerDataSynced = true
+        end
+    end
+
     while true do
-        local playerCoords = GetEntityCoords(PlayerPedId())
-        local playerHeading = GetEntityHeading(ped)
+        playerPed = PlayerPedId()
+        local playerCoords = GetEntityCoords(playerPed)
+        local playerHeading = GetEntityHeading(playerPed)
         local cocaFieldCoords = Config.PickingZone
         -- local cocaProcessingCoords = Config.ProcessingZone
 
@@ -298,14 +316,6 @@ Citizen.CreateThread(function ()
 
         dist = #(playerCoords - Config['Buyer']['pos'].xyz)
 
-        if not buyerDataSynced then
-            syncBuyerData()
-            Citizen.Wait(1000)
-            if buyerPed ~= nil and buyerVehicle ~= nil then
-                buyerDataSynced = true
-            end
-        end
-
         if not buyerObjectsSynced and buyerDataSynced and dist <= 50.0 then
             if buyerPed ~= nil and buyerVehicle ~= nil then
                 if GetIsVehicleEngineRunning(buyerVehicle) == false then
@@ -323,6 +333,6 @@ Citizen.CreateThread(function ()
         end
 
         -- wait 1 seconds
-        Citizen.Wait(1000)
+        Wait(1000)
     end
 end)
