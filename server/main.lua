@@ -1,21 +1,5 @@
 local QBCore = exports['qb-core']:GetCoreObject()
 
-local buyerPed = nil
-local buyerPedNetId = nil
-
-local buyerVehicle = nil
-local buyerVehicleNetId = nil
-
-local bodyguard1 = nil
-local bodyguard1NetId = nil
-
-local bodyguard2 = nil
-local bodyguard2NetId = nil
-
-local bodyguardAnimDict = 'anim@move_m@security_guard'
-local bodyguardAnim = 'idle_var_01'
-local bodyguard2Anim = 'idle_var_02'
-
 RegisterServerEvent('qb-cocaine:server:rewardCocaLeaves')
 AddEventHandler('qb-cocaine:server:rewardCocaLeaves', function()
     local src = source
@@ -26,6 +10,7 @@ AddEventHandler('qb-cocaine:server:rewardCocaLeaves', function()
     local max = Config['Reward']['coca_leaves']['maxAmount']
     local randomAmount = math.random(min, max)
     Player.Functions.AddItem(rewardItem, randomAmount)
+
     TriggerClientEvent('inventory:client:ItemBox', src, QBCore.Shared.Items[rewardItem], 'add')
 end)
 
@@ -68,69 +53,3 @@ AddEventHandler('qb-cocaine:server:sellCocaine', function (amount)
     QBCore.Functions.Notify(src, Lang:t("success.sold_amount", { amount = amount, reward = rewardAmount}), "success", 1000)
 end)
 
-
-local function initBuyerPeds()
-    local vehiclePos = Config.Buyer.vehiclePos
-    buyerVehicle = CreateVehicleServerSetter(GetHashKey(Config.Buyer.vehicle), "automobile", vehiclePos.x, vehiclePos.y, vehiclePos.z - 0.6, vehiclePos.w)
-    Wait(200)
-    buyerVehicleNetId = NetworkGetNetworkIdFromEntity(buyerVehicle)
-    if DoesEntityExist(buyerVehicle) then
-        SetVehicleCustomPrimaryColour(buyerVehicle, 0, 0, 0)
-        SetVehicleDoorsLocked(buyerVehicle, 2)
-    end
-
-    buyerPed = CreatePed(0, GetHashKey(Config.Buyer.ped), Config.Buyer.pos.xyz, Config.Buyer.pos.w, true)
-    Wait(100)
-    buyerPedNetId = NetworkGetNetworkIdFromEntity(buyerPed)
-    FreezeEntityPosition(buyerPed, true)
-
-    bodyguard1 = CreatePed(0, GetHashKey(Config.Buyer.bodyguard), Config.Buyer.pos.x + 1.5, Config.Buyer.pos.y, Config.Buyer.pos.z, Config.Buyer.pos.w, true)
-    Wait(100)
-    bodyguard1NetId = NetworkGetNetworkIdFromEntity(bodyguard1)
-    FreezeEntityPosition(bodyguard1, true)
-    TaskPlayAnim(bodyguard1, bodyguardAnimDict, bodyguardAnim, 8.0, 8.0, -1, 1)
-
-    bodyguard2 = CreatePed(0, GetHashKey(Config.Buyer.bodyguard), Config.Buyer.pos.x, Config.Buyer.pos.y + 1.5, Config.Buyer.pos.z, Config.Buyer.pos.w + 15.0, true)
-    Wait(100)
-    bodyguard2NetId = NetworkGetNetworkIdFromEntity(bodyguard2)
-    FreezeEntityPosition(bodyguard2, true)
-    TaskPlayAnim(bodyguard2, bodyguardAnimDict, bodyguard2Anim, 8.0, 8.0, -1, 1)
-
-end
-
--- CALLBACKS
-QBCore.Functions.CreateCallback("qb-cocaine:server:getBuyerData", function (source, cb)
-    if buyerVehicleNetId == 0 or buyerVehicleNetId == nil then
-        cb({
-            buyerPed = nil,
-            buyerVehicle = nil,
-            bodyguard1 = nil,
-            bodyguard2 = nil
-        })
-    else
-        cb({
-            buyerPed = buyerPedNetId,
-            buyerVehicle = buyerVehicleNetId,
-            bodyguard1 = bodyguard1NetId,
-            bodyguard2 = bodyguard2NetId
-        })
-    end
-end)
-
-AddEventHandler('onResourceStart', function(resourceName)
-    if (GetCurrentResourceName() ~= resourceName) then
-      return
-    end
-
-    Wait(1000)
-    initBuyerPeds()
-end)
-
-AddEventHandler("onResourceStop", function (resourceName)
-    if resourceName == GetCurrentResourceName() then
-        DeleteEntity(buyerPed)
-        DeleteEntity(bodyguard1)
-        DeleteEntity(bodyguard2)
-        DeleteEntity(buyerVehicle)
-    end
-end)

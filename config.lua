@@ -30,7 +30,11 @@ Config.Reward = {
 Config.Buyer = {
     ped = 'ig_djsolmike', -- ped model of buyer
     bodyguard = 'u_m_m_jewelsec_01', -- ped model of bodyguards of the buyer
-    pos = vector4(2487.59, 4960.33, 44.83, 127.95),
+    pos = vector4(2487.59, 4960.33, 43.84, 127.95),
+
+    bodyguard1Pos = vector4(2489.08, 4960.33, 43.82, 127.56),
+    bodyguard2Pos = vector4(2487.59, 4961.83, 43.82, 141.73),
+
     vehicle = 'baller', -- vehicle model of buyer
-    vehiclePos = vector4(2490.77, 4963.66, 43.92, 135.17)
+    vehiclePos = vector4(2490.77, 4963.66, 43.82, 135.17)
 }

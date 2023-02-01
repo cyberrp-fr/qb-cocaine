@@ -3,7 +3,6 @@ local busy = false -- check if player already either picking or processing
 
 local isInsideZone = false -- is player inside picking zone
 local isInsideProcessingZone = false -- is player inside processing zone
-local isNearBuyer = false
 
 local animLoaded = false -- picking anim loaded 
 local processAnimLoaded = false -- processing anim loaded
@@ -133,15 +132,16 @@ local buyerAnimLoaded = false
 local buyerAnimDict = 'mp_ped_interaction'
 local buyerAnim = 'handshake_guy_a'
 
-local buyerDataSynced = false -- has buyer peds and vehicle data been retrieved from server
-local buyerObjectsSynced = false -- has buyer peds and vehicle been configured
-
 local buyerVehicle = nil
 local buyerPed = nil
 local bodyguard1 = nil
 local bodyguard2 = nil
 local buyerZoneIsInside = false
 local buyerZoneLoopIsRunning = false
+
+local bodyguardAnimDict = 'anim@move_m@security_guard'
+local bodyguardAnim = 'idle_var_01'
+local bodyguard2Anim = 'idle_var_02'
 
 -- sell cocaine to buyer function
 local function sellCocaineToBuyer()
@@ -168,10 +168,11 @@ local function sellCocaineToBuyer()
         buyerAnimLoaded = true
     end
 
-    local animDuration = 1600
-    TaskPlayAnim(playerPed, buyerAnimDict, buyerAnim, 8.0, 8.0, animDuration, 0)
+    local animDuration = 1500
     TaskPlayAnim(buyerPed, buyerAnimDict, buyerAnim, 8.0, 8.0, animDuration, 0)
+    TaskPlayAnim(playerPed, buyerAnimDict, buyerAnim, 8.0, 8.0, animDuration, 0)
     Wait(animDuration)
+    StopAnimTask(buyerPed)
 
     TriggerServerEvent('qb-cocaine:server:sellCocaine', amount)
 end
@@ -182,7 +183,7 @@ local function buyerZoneLoop()
         Citizen.CreateThread(function ()
             buyerZoneLoopIsRunning = true
             while buyerZoneIsInside do
-                QBCore.Functions.DrawText3D(Config.Buyer.pos.x, Config.Buyer.pos.y, Config.Buyer.pos.z + 0.3, Lang:t("info.press_sell_cocaine"))
+                QBCore.Functions.DrawText3D(Config.Buyer.pos.x, Config.Buyer.pos.y, Config.Buyer.pos.z + 1.3, Lang:t("info.press_sell_cocaine"))
     
                 -- detect click
                 if IsControlJustPressed(0, 51) then
@@ -202,85 +203,87 @@ local function buyerZoneLoop()
     end
 end
 
--- function that syncs buyer ped
-local function syncBuyerPeds()
-    local bodyguardAnimDict = 'anim@move_m@security_guard'
+local function createPeds()
+    loadModel(Config.Buyer.vehicle)
+    loadModel(Config.Buyer.ped)
+    loadModel(Config.Buyer.bodyguard)
     loadAnimDict(bodyguardAnimDict)
-    Wait(200)
 
-    -- [start] sync vehicle
-    FreezeEntityPosition(buyerVehicle, true)
-    SetEntityInvincible(buyerVehicle, true)
-    SetVehicleEngineOn(buyerVehicle, true)
-    SetVehicleLights(buyerVehicle, 2)
-    SetVehicleDoorsLocked(buyerVehicle, 2)
-    -- [end] sync vehicle
+    local vPos = Config.Buyer.vehiclePos
+    buyerVehicle = CreateVehicle(GetHashKey(Config.Buyer.vehicle), vPos.xyz, vPos.w, false, false)
+    while not DoesEntityExist(buyerVehicle) do
+        Wait(100)
+    end
+    if DoesEntityExist(buyerVehicle) then
+        SetVehicleCustomPrimaryColour(buyerVehicle, 0, 0, 0)
+        SetVehicleDoorsLocked(buyerVehicle, 2)
+        FreezeEntityPosition(buyerVehicle, true)
+        SetEntityInvincible(buyerVehicle, true)
+        SetVehicleEngineOn(buyerVehicle, true, true)
+        SetVehicleLights(buyerVehicle, 2)
+    end
 
-
-    -- [start] sync peds
+    buyerPed = CreatePed(0, GetHashKey(Config.Buyer.ped), Config.Buyer.pos.x, Config.Buyer.pos.y, Config.Buyer.pos.z, Config.Buyer.pos.w, false)
+    while not DoesEntityExist(buyerPed) do
+        Wait(100)
+    end
+    SetBlockingOfNonTemporaryEvents(buyerPed, true)
     FreezeEntityPosition(buyerPed, true)
     SetEntityInvincible(buyerPed, true)
-    SetBlockingOfNonTemporaryEvents(buyerPed, true)
 
+    bodyguard1 = CreatePed(0, GetHashKey(Config.Buyer.bodyguard), Config.Buyer.bodyguard1Pos.xyz, Config.Buyer.bodyguard1Pos.w, false)
+    while not DoesEntityExist(bodyguard1) do
+        Wait(100)
+    end
+    SetBlockingOfNonTemporaryEvents(bodyguard1, true)
     FreezeEntityPosition(bodyguard1, true)
     SetEntityInvincible(bodyguard1, true)
-    SetBlockingOfNonTemporaryEvents(bodyguard1, true)
+    TaskPlayAnim(bodyguard1, bodyguardAnimDict, bodyguardAnim, 8.0, 8.0, -1, 1)
 
-    FreezeEntityPosition(bodyguard2, true)
+    bodyguard2 = CreatePed(0, GetHashKey(Config.Buyer.bodyguard), Config.Buyer.bodyguard2Pos.xyz, Config.Buyer.bodyguard2Pos.w, false)
+    while not DoesEntityExist(bodyguard2) do
+        Wait(100)
+    end
     SetEntityInvincible(bodyguard2, true)
     SetBlockingOfNonTemporaryEvents(bodyguard2, true)
-    -- [end] sync peds
+    FreezeEntityPosition(bodyguard2, true)
+    TaskPlayAnim(bodyguard2, bodyguardAnimDict, bodyguard2Anim, 8.0, 8.0, -1, 1)
 end
 
--- retrieving peds and vehicle IDs from server
-local function syncBuyerData()
-    QBCore.Functions.TriggerCallback("qb-cocaine:server:getBuyerData", function (data)
-        if data.buyerVehicle == nil or data.buyerPed == nil or data.bodyguard1 == nil or data.bodyguard2 == nil then
-            return
-        end
-
-        buyerPed = NetToPed(data.buyerPed)
-        buyerVehicle = NetToVeh(data.buyerVehicle)
-        bodyguard1 = NetToPed(data.bodyguard1)
-        bodyguard2 = NetToPed(data.bodyguard2)
-
-        if buyerVehicle ~= nil and buyerVehicle ~= 0 then
-            buyerDataSynced = true
-        end
-    end)
-end
-
-AddEventHandler("onClientResourceStart", function (resourceName)
-    if resourceName == GetCurrentResourceName() then
-        loadModel(Config.Buyer.vehicle)
-        loadModel(Config.Buyer.ped)
-        loadModel(Config.Buyer.bodyguard)
+-- Event handler that deletes created peds and vehicle
+AddEventHandler("onResourceStop", function (resource)
+    if resource == GetCurrentResourceName() then
+        DeleteEntity(buyerPed)
+        DeleteEntity(buyerVehicle)
+        DeleteEntity(bodyguard1)
+        DeleteEntity(bodyguard2)
     end
 end)
 
-local function loadBuyerData()
-    CreateThread(function ()
-        while isNearBuyer and not buyerDataSynced do
-            Wait(100)
-            syncBuyerData()
-
-            if bodyguard1 ~= nil and bodyguard1 ~= 0 then
-                buyerDataSynced = true
-            end
-        end
-    end)
+-- function that insures that peds and vehicle creation
+-- it is called non-stop until peds and vehicle is created
+local startingPeds = false
+local function startPeds()
+    if not startingPeds then
+        startingPeds = true
+        CreateThread(function ()
+            createPeds()
+        end)
+        startingPeds = false
+    end
 end
 
 -- =========
 -- MAIN LOOP
 -- =========
 CreateThread(function ()
+    createPeds()
+
     while true do
         playerPed = PlayerPedId()
         local playerCoords = GetEntityCoords(playerPed)
         local playerHeading = GetEntityHeading(playerPed)
         local cocaFieldCoords = Config.PickingZone
-        -- local cocaProcessingCoords = Config.ProcessingZone
 
         -- ==================
         -- === Harvesting ===
@@ -321,23 +324,11 @@ CreateThread(function ()
         -- =============
 
         dist = #(playerCoords - Config['Buyer']['pos'].xyz)
-        if dist <= 50.0 then
-            isNearBuyer = true
-        else
-            isNearBuyer = false
-        end
-
-        if not buyerDataSynced and isNearBuyer then
-            loadBuyerData()
-        end
-
-        if not buyerObjectsSynced and buyerDataSynced and dist <= 50.0 then
-            if buyerPed ~= nil and buyerVehicle ~= nil then
-                if GetIsVehicleEngineRunning(buyerVehicle) == false then
-                    syncBuyerPeds()
-                    buyerObjectsSynced = true
-                end
+        if dist <= 50.0 then -- if player is near buyer
+            if buyerPed == nil or buyerPed == 0 then
+                startPeds() -- create peds and vehicle if not already done
             end
+        else
         end
 
         if dist <= 3.0 and (playerHeading <= 360.0 and playerHeading >= 260.0) then
