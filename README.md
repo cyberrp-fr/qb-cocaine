@@ -35,7 +35,7 @@ That's pretty much it, you can of course change some settings in `config.lua` fi
 If this script was helpful, please consider leaving a star.
 
 ### Authors
- - [ibra-akv](https://github.com/0xIbra/) 
+ - [0xIbra](https://github.com/0xIbra/) 
 
 
 ### [LICENSE](https://github.com/0xIbra/qb-cocaine/blob/master/LICENSE)
