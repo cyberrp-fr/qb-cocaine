@@ -1,6 +1,8 @@
 # QB-Cocaine
 FiveM Cocaine picking, processing and selling script for QBCore Framework.
 
+## [Preview](https://youtu.be/EEy-oY-7jy4)
+
 ### Dependencies
  - **Cayo Perico Map**  
     This dependency can be easily removed by changing the `PickingZone` and `ProcessingZone` variables in `config.lua`.  
