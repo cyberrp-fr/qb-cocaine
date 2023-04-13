@@ -14,8 +14,6 @@ shared_scripts {
 }
 
 client_scripts {
-    '@PolyZone/client.lua',
-    '@PolyZone/BoxZone.lua',
     'client/main.lua'
 }
 
