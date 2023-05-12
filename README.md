@@ -16,7 +16,7 @@ FiveM Cocaine picking, processing and selling script for QBCore Framework.
 
 1. clone repo into your `resources` folder
 
-    git clone https://github.com/ibra-akv/qb-cocaine.git
+    git clone https://github.com/0xIbra/qb-cocaine.git
 
 2. Edit `items.lua` file to add these 2 new items
 
