@@ -36,8 +36,8 @@ That's pretty much it, you can of course change some settings in `config.lua` fi
 
 If this script was helpful, please consider leaving a star.
 
-### Authors
- - [0xIbra](https://github.com/0xIbra/) 
+### Discord
 
+CyberRP Scripts: https://discord.gg/3SmVRVcDaf
 
-### [LICENSE](https://github.com/0xIbra/qb-cocaine/blob/master/LICENSE)
+### [LICENSE](https://github.com/cyberrp-fr/qb-cocaine/blob/master/LICENSE)
